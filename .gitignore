@@ -3,3 +3,5 @@
 *.ipynb
 *.xlsx
 *.xls
+/excel_files
+*.zip
