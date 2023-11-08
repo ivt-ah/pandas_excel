@@ -5,3 +5,4 @@
 *.xls
 /excel_files
 *.zip
+__pycache__/
