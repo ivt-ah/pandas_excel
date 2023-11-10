@@ -125,7 +125,7 @@ def add_series_to_chart(chart, data_shape):
 	# configure the series from the dataframe data
 	(max_row, max_col) = data_shape
 
-	for col in range(1, max_col):
+	for col in range(1, max_col + 1):
 
 		has_y2_axis = col == 3
 		series_config = get_series_config(col, max_row, has_y2_axis, STARTROW)
@@ -144,9 +144,9 @@ def get_series_config(col, max_row, has_y2_axis, startrow):
 	[{sheet_title}, row_min, col_min, row_max, col_max]
 	'''
 	config = {
-			'name': ['Sheet1', startrow, col], # row, col
-	 		'categories': ['Sheet1', startrow + 2, 0, startrow + max_row - 1, 0], # max_row - 1 because 0-indexed
-	 		'values': ['Sheet1', startrow + 2, col, startrow + max_row - 1, col], 
+			'name': ['Sheet1', startrow - 1, col], # row, col
+	 		'categories': ['Sheet1', startrow + 1, 0, startrow + max_row - 1, 0], # max_row - 1 because 0-indexed
+	 		'values': ['Sheet1', startrow + 1, col, startrow + max_row - 1, col], 
 	 		'marker': { 
 	 			'type': 'automatic',
 	 			'size': 1, 
