@@ -1,5 +1,6 @@
 import pandas as pd 
 import xlrd
+from style import style_worksheet
 
 
 COLS_TO_PARSE = [0, 2, 6]
@@ -11,22 +12,33 @@ COL_TITLES_AFTER_PIVOT = ['Time Stamp', 'pH', 'DO', 'Agitation', 'CO2', 'O2', 'T
 # SEQUENCE OF UNITS, order important
 UNITS = ['Hour', 'Unit', '%', 'RPM', 'SLPM', 'SLPM', '°C']
 
-# col_rename_dict = {
-# 	'1-pH_Dev1': 'pH',
-# 	'2-DO_Dev1': 'DO',
-# 	'Agitation_Dev1': 'Agitation',
-# 	'S-Air_Dev1': 'Aeration',
-# 	'S-CO2_Dev1': 'CO2',
-# 	'S-O2_Dev1': 'Oxygen',
-# 	'Temp_Dev1': 'Temperature',
-# 	'1-pH_Dev2': 'pH',
-# 	'2-DO_Dev2': 'DO',
-# 	'Agitation_Dev2': 'Agitation',
-# 	'S-Air_Dev2': 'Aeration',
-# 	'S-CO2_Dev2': 'CO2',
-# 	'S-O2_Dev2': 'Oxygen',
-# 	'Temp_Dev2': 'Temperature',
-# }
+col_rename_dict = {
+	'1-pH_Dev1': 'pH',
+	'2-DO_Dev1': 'DO',
+	'Agitation_Dev1': 'Agitation',
+	'S-Air_Dev1': 'Aeration',
+	'S-CO2_Dev1': 'CO2',
+	'S-O2_Dev1': 'O2',
+	'Temp_Dev1': 'Temperature',
+	'1-pH_Dev2': 'pH',
+	'2-DO_Dev2': 'DO',
+	'Agitation_Dev2': 'Agitation',
+	'S-Air_Dev2': 'Aeration',
+	'S-CO2_Dev2': 'CO2',
+	'S-O2_Dev2': 'O2',
+	'Temp_Dev2': 'Temperature',
+}
+
+unit_dict = {
+    'Time Stamp': 'Hour',
+	'pH': 'Unit',
+	'Agitation': 'RPM',
+	'DO': '%',
+	'Temperature': '°C',
+	'Aeration': 'SLPM',
+	'O2': 'SLPM',
+	'CO2': 'SLPM',
+}
 
 # create DataFrame object from excel file
 
@@ -44,12 +56,12 @@ def get_concat_dataframe(xlrd_book):
 					    .dropna() \
 					    .pivot(index='Time Stamp', columns='Loop Name', values='Process Value')
 
-	# drop any unwanted columns and rename remaining columns
+	# drop any unwanted columns and rename cols
 	cols_to_drop = [col for col in list(bioreactor_data.columns) if 'Pump' in col]
-	bioreactor_data = bioreactor_data.drop(columns=cols_to_drop)  
-									# .rename(columns=col_rename_dict)
+	bioreactor_data = bioreactor_data.drop(columns=cols_to_drop) \
+			                         .rename(columns=col_rename_dict)
 
-	return bioreactor_data
+	return (bioreactor_data, bioreactor_data.columns.insert(0, 'Time Stamp'))
 
 
 
@@ -66,6 +78,7 @@ def create_dataframe(xlrd_book, sheet_name, skiprows):
 
 
 def create_output_workbook(file_path):
+	print('creating output')
 
 	input_workbook = xlrd.open_workbook(file_path)
 
@@ -74,14 +87,14 @@ def create_output_workbook(file_path):
 
 	# NEED TO CLOSE XLRD WORKBOOK?????
 
-	data = get_concat_dataframe(input_workbook)
+	(data, column_names) = get_concat_dataframe(input_workbook)
 
 	# write data to excel sheet
-	writer = pd.ExcelWriter(f'{title}.xlsx', engine='xlsxwriter')
+	writer = pd.ExcelWriter(f'./output/{title}.xlsx', engine='xlsxwriter')
 	data.to_excel(writer, 
 		          sheet_name='Sheet1', 
 		          startrow=STARTROW, 
-		          freeze_panes=(STARTROW + 1,NUM_PARAMS),
+		          freeze_panes=(STARTROW + 1,len(column_names)),
 		          )
 	
 	# create workbook 
@@ -93,11 +106,10 @@ def create_output_workbook(file_path):
 	
 	ws.write('A1', title, bold)
 
-	for col, name in enumerate(COL_TITLES_AFTER_PIVOT):
+	for col, name in enumerate(column_names):
 		ws.write(STARTROW - 1, col, name, bold)
+		ws.write(STARTROW, col, unit_dict[name], bold)
 
-	for col, unit in enumerate(UNITS):
-		ws.write(STARTROW, col, unit, bold)
 
 	# copy columns headers to row 2 0-indexed
 	# write units to row 3 0-indexed
@@ -109,7 +121,7 @@ def create_output_workbook(file_path):
 	cs = wb.add_chartsheet() 
 
 	# create chart object
-	chart = wb.add_chart({ 'type': 'scatter', })
+	chart = wb.add_chart({ 'type': 'line', })
 
 	# configure chart
 	chart = configure_chart(chart, data.shape, title)
@@ -118,6 +130,9 @@ def create_output_workbook(file_path):
 	cs.set_chart(chart)
 
 	writer.close()
+
+	style_worksheet(f'./output/{title}.xlsx')
+
 
 
 def add_series_to_chart(chart, data_shape):
@@ -147,10 +162,6 @@ def get_series_config(col, max_row, has_y2_axis, startrow):
 			'name': ['Sheet1', startrow - 1, col], # row, col
 	 		'categories': ['Sheet1', startrow + 1, 0, startrow + max_row - 1, 0], # max_row - 1 because 0-indexed
 	 		'values': ['Sheet1', startrow + 1, col, startrow + max_row - 1, col], 
-	 		'marker': { 
-	 			'type': 'automatic',
-	 			'size': 1, 
-	 		 },
 	 		 'line': { 
 	 		 	'dash_type': 'solid',
 	 		 	'size': 1,
@@ -163,12 +174,33 @@ def get_series_config(col, max_row, has_y2_axis, startrow):
 def configure_chart(chart, data_shape, chart_title):
 
 	# configure chart axes and title
-	chart.set_x_axis({ 'name': 'EFT, hour', })
-	chart.set_y_axis({ 'name': 'DO, %', })
-	chart.set_y2_axis({ 'name': 'Agitation, RPM'})
+	chart.set_x_axis({ 'name': 'EFT, hour', 
+		               'num_format': '0',
+		               'interval_unit': 100, 
+		               'interval_tick': 200,
+		               'major_gridlines': { 
+		                                    'visible': True, 
+		                                    'line': { 
+		                                    		  'color': 'gray',
+		                                              'transparency': 80, 
+		                                            }, 
+		                                   }, 
+		             })
+	chart.set_y_axis({ 'name': 'DO, %',
+		               'crossing': 'min', 
+		               'major_gridlines': { 
+		                                    'visible': True, 
+		                                    'line': { 
+		                                    		  'color': 'gray',
+		                                              'transparency': 80, 
+		                                            }, 
+		                                   }, 
+		               })
+	chart.set_y2_axis({ 'name': 'Agitation, RPM', 
+		                'crossing': 'min', })
 
 	chart.set_title({ 'name': f'{chart_title} Fermentor Conditions', })
-	chart.set_legend({ 'position': 'bottom' })
+	chart.set_legend({ 'position': 'bottom', })
 
 	# configure the series from the dataframe data
 	chart = add_series_to_chart(chart, data_shape)

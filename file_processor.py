@@ -6,17 +6,18 @@ from pandas_pract import create_output_workbook, get_concat_dataframe
 
 
 
-# # use glob to get all excel files
-# dir_name = 'excel_files'
-# path = f'{os.getcwd()}\\{dir_name}' 
 
-# excel_files = glob.glob(os.path.join(path, '*.xls'))
+# use glob to get all excel files
+dir_name = 'excel_files'
+path = f'{os.getcwd()}\\{dir_name}' 
+
+excel_files = glob.glob(os.path.join(path, '*.xls'))
 
 
-# # loop over list of excel files
-# for excel_file in excel_files:
+# loop over list of excel files
+for excel_file in excel_files:
 
-# 	create_output_workbook(excel_file)
+	create_output_workbook(excel_file)
 
 
 
@@ -24,9 +25,10 @@ from pandas_pract import create_output_workbook, get_concat_dataframe
 # TEST SINGLE FILE
 
 
-dir_name = 'excel_files'
-path = f'{os.getcwd()}\\{dir_name}'
-file_path = os.path.join(path, 'a.xls')
+# dir_name = 'excel_files'
+# path = f'{os.getcwd()}\\{dir_name}'
+# file_path = os.path.join(path, 'a.xls')
 	
-create_output_workbook(file_path)
+
+# file_name = create_output_workbook(file_path)
 
